@@ -1,0 +1,20 @@
+{
+  "name": "aim2motec-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "verify": "vite-node scripts/makeSample.ts && python3 scripts/verify_ld.py"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vite": "^6.3.6",
+    "vite-node": "^3.2.4",
+    "vitest": "^3.2.4"
+  }
+}
