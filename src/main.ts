@@ -26,41 +26,49 @@ let nameTableText = stringifyNameTable(DEFAULT_NAME_TABLE);
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 app.innerHTML = `
-  <header class="app-header">
-    <h1>AiM <span class="arrow">→</span> MoTeC</h1>
-    <span class="subtitle" style="margin:0">.xrk / .xrz / RaceStudio CSV → i2 Pro .ld/.ldx</span>
-  </header>
-  <p class="subtitle">
-    Drop AiM log files here and download a MoTeC i2 Pro log pair (.ld + .ldx).
-    Native <b>.xrk</b> and <b>.xrz</b> files are read directly — no RaceStudio or
-    AiM software needed. RaceStudio <b>CSV</b> exports work too. Everything runs in
-    your browser; no data leaves this page.
-  </p>
-  <div class="dropzone" id="dropzone">
-    <div class="big">Drop AiM .xrk, .xrz or .csv files here</div>
-    <div class="hint">or click to browse — multiple files supported</div>
-    <input type="file" id="fileInput" accept=".xrk,.xrz,.csv,text/csv" multiple hidden />
-  </div>
-  <div class="options-bar">
-    <label class="check">
-      <input type="checkbox" id="renameCheck" checked />
-      Rename channels to MoTeC standard
-    </label>
-    <button class="secondary" id="editTableBtn" type="button">Edit name table</button>
-  </div>
-  <div id="tableEditor" class="section" hidden>
-    <h2>Name conversion table</h2>
-    <textarea class="name-table" id="nameTableInput" spellcheck="false"></textarea>
-  </div>
-  <div class="section" id="filesSection" hidden>
-    <h2>Files</h2>
-    <div id="fileList"></div>
+  <div class="window">
+    <div class="titlebar">
+      <span class="titlebar-text">&#127937; AiM2MoTeC.exe &mdash; Telemetry Converter</span>
+      <span class="titlebar-controls" aria-hidden="true"><span class="tbtn">_</span><span class="tbtn">&#9633;</span><span class="tbtn">&times;</span></span>
+    </div>
+    <div class="window-body">
+      <p class="intro">
+        Convert AiM <b>.xrk</b> / <b>.xrz</b> logs &mdash; or RaceStudio <b>CSV</b> exports &mdash;
+        to MoTeC i2 Pro (<b>.ld</b> + <b>.ldx</b>). Native logger files are read directly,
+        with no RaceStudio or AiM software required. Everything runs in your browser; nothing is uploaded.
+      </p>
+      <div class="dropzone" id="dropzone">
+        <div class="big">Drop .xrk, .xrz or .csv files here</div>
+        <div class="hint">&mdash; or click to browse (multiple files OK) &mdash;</div>
+        <input type="file" id="fileInput" accept=".xrk,.xrz,.csv,text/csv" multiple hidden />
+      </div>
+      <fieldset class="options">
+        <legend>Options</legend>
+        <label class="check">
+          <input type="checkbox" id="renameCheck" checked />
+          Rename channels to MoTeC standard
+        </label>
+        <button class="secondary" id="editTableBtn" type="button">Edit name table&hellip;</button>
+      </fieldset>
+      <div id="tableEditor" class="section" hidden>
+        <div class="section-title">Name Conversion Table</div>
+        <textarea class="name-table" id="nameTableInput" spellcheck="false"></textarea>
+      </div>
+      <div class="section" id="filesSection" hidden>
+        <div class="section-title">Files</div>
+        <div id="fileList"></div>
+      </div>
+    </div>
+    <div class="statusbar">
+      <span id="status">Ready.</span>
+      <span>xrk-js &middot; Aim_2_MoTeC &middot; MIT</span>
+    </div>
   </div>
   <footer>
     Native .xrk/.xrz parsing by <a href="https://github.com/cyprien0312/xrk-js" target="_blank" rel="noopener">xrk-js</a>
     (a TypeScript port of <a href="https://github.com/m3rlin45/libxrk" target="_blank" rel="noopener">libxrk</a>);
     .ld writer ported from <a href="https://github.com/ludovicb1239/Aim_2_MoTeC" target="_blank" rel="noopener">Aim_2_MoTeC</a>. All MIT.
-    Generated files open in MoTeC i2 Pro.
+    Files open in MoTeC i2 Pro.
   </footer>
 `;
 
@@ -107,10 +115,17 @@ fileInput.addEventListener("change", () => {
   fileInput.value = "";
 });
 
+function setStatus(text: string) {
+  const el = document.getElementById("status");
+  if (el) el.textContent = text;
+}
+
 async function addFiles(files: FileList) {
-  for (const file of Array.from(files)) {
+  const list = Array.from(files);
+  for (const file of list) {
     const entry: FileEntry = { id: nextId++, fileName: file.name };
     entries.push(entry);
+    setStatus(`Reading ${file.name}…`);
     try {
       const fallbackDate = new Date(file.lastModified);
       const ext = file.name.toLowerCase().split(".").pop();
@@ -127,6 +142,9 @@ async function addFiles(files: FileList) {
       entry.error = err instanceof Error ? err.message : String(err);
     }
   }
+  const ok = entries.filter((e) => e.parsed).length;
+  const bad = entries.filter((e) => e.error).length;
+  setStatus(`${ok} file(s) loaded${bad ? `, ${bad} failed` : ""}.`);
   render();
 }
 
@@ -162,6 +180,7 @@ function convertEntry(entry: FileEntry) {
   download(`${result.baseName}.ld`, result.ld, "application/octet-stream");
   download(`${result.baseName}.ldx`, result.ldx, "application/xml");
   entry.converted = true;
+  setStatus(`Saved ${result.baseName}.ld + .ldx.`);
   render();
 }
 
@@ -288,6 +307,7 @@ function render() {
     const actions = document.createElement("div");
     actions.className = "row-actions";
     const btn = document.createElement("button");
+    btn.className = "primary";
     btn.textContent = "Convert & download .ld + .ldx";
     btn.addEventListener("click", () => convertEntry(entry));
     actions.appendChild(btn);
