@@ -69,12 +69,6 @@ app.innerHTML = `
     <div class="section-title">Files</div>
     <div id="fileList"></div>
   </div>
-  <footer>
-    Native .xrk/.xrz parsing by <a href="https://github.com/cyprien0312/xrk-js" target="_blank" rel="noopener">xrk-js</a>
-    (a TypeScript port of <a href="https://github.com/m3rlin45/libxrk" target="_blank" rel="noopener">libxrk</a>);
-    .ld writer ported from <a href="https://github.com/ludovicb1239/Aim_2_MoTeC" target="_blank" rel="noopener">Aim_2_MoTeC</a>. All MIT.
-    Files open in MoTeC i2 Pro.
-  </footer>
 `;
 
 const dropzone = document.getElementById("dropzone")!;
