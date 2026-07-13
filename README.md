@@ -4,7 +4,7 @@ Browser-based converter from **AiM** telemetry to **MoTeC i2 Pro** log files (`.
 
 Everything runs client-side; no data leaves the browser.
 
-**[▶ Try it live](https://claude.ai/code/artifact/037be539-a837-403f-9046-53c56c3afa0f)**
+**[▶ Try it live](https://cyprien0312.github.io/aim2motec/)**
 
 ## What it does
 
