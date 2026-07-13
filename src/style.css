@@ -343,6 +343,25 @@ td.nt-remove {
   font-family: var(--mono);
   letter-spacing: 0;
 }
+.archive-badge {
+  font-size: 12px;
+  letter-spacing: -0.08px;
+  padding: 2px 10px;
+  border-radius: 980px;
+  white-space: nowrap;
+}
+.archive-badge.archive-pending {
+  color: var(--muted);
+  background: var(--parchment);
+}
+.archive-badge.archive-ok {
+  color: #0a6b2e;
+  background: #e6f4ea;
+}
+.archive-badge.archive-failed {
+  color: #8a6d00;
+  background: var(--warn-bg);
+}
 .error {
   color: #b3261e;
   font-size: 14px;

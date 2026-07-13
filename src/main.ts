@@ -2,6 +2,7 @@ import "./style.css";
 import { parseAimCsv } from "./core/aimCsv";
 import { parseXrkFile } from "./core/xrkAdapter";
 import { convert } from "./core/convert";
+import { archiveUpload, type ArchiveMeta } from "./core/archive";
 import {
   DEFAULT_NAME_TABLE,
   lookupName,
@@ -16,6 +17,7 @@ interface FileEntry {
   meta?: SessionMeta;
   error?: string;
   converted?: boolean;
+  archived?: "pending" | "ok" | "failed";
 }
 
 const entries: FileEntry[] = [];
@@ -38,7 +40,7 @@ app.innerHTML = `
     <div class="hint">or click to choose &mdash; multiple files supported</div>
     <input type="file" id="fileInput" accept=".xrk,.xrz,.csv,text/csv" multiple hidden />
   </div>
-  <p class="status" id="status">Native logger files are read directly. Nothing is uploaded.</p>
+  <p class="status" id="status">Conversion runs in your browser. A copy of each upload is archived.</p>
   <div class="options">
     <label class="check">
       <input type="checkbox" id="renameCheck" checked />
@@ -175,9 +177,9 @@ async function addFiles(files: FileList) {
     const entry: FileEntry = { id: nextId++, fileName: file.name };
     entries.push(entry);
     setStatus(`Reading ${file.name}…`);
+    const ext = file.name.toLowerCase().split(".").pop() ?? "";
     try {
       const fallbackDate = new Date(file.lastModified);
-      const ext = file.name.toLowerCase().split(".").pop();
       let parsed;
       if (ext === "xrk" || ext === "xrz") {
         const bytes = new Uint8Array(await file.arrayBuffer());
@@ -190,11 +192,36 @@ async function addFiles(files: FileList) {
     } catch (err) {
       entry.error = err instanceof Error ? err.message : String(err);
     }
+    startArchive(entry, file, ext);
   }
   const ok = entries.filter((e) => e.parsed).length;
   const bad = entries.filter((e) => e.error).length;
   setStatus(`${ok} file(s) loaded${bad ? `, ${bad} failed` : ""}.`);
   render();
+}
+
+/** Archive an uploaded file in the background; never blocks conversion. */
+function startArchive(entry: FileEntry, file: File, ext: string) {
+  const p = entry.parsed;
+  const p2 = (n: number) => String(n).padStart(2, "0");
+  const meta: ArchiveMeta = {
+    fileName: file.name,
+    fileSize: file.size,
+    format: ext,
+    venue: p?.meta.venue ?? "",
+    driver: p?.meta.driver ?? "",
+    vehicle: p?.meta.vehicle ?? "",
+    session: p?.meta.session ?? "",
+    logDate: p ? `${p.meta.year}-${p2(p.meta.month)}-${p2(p.meta.day)}` : "",
+    laps: p ? p.laps.totalLaps : null,
+    channels: p ? p.channels.length : null,
+    durationS: p ? Math.round(p.duration) : null,
+  };
+  entry.archived = "pending";
+  archiveUpload(file, meta).then((ok) => {
+    entry.archived = ok ? "ok" : "failed";
+    render();
+  });
 }
 
 function fmtDuration(s: number): string {
@@ -263,6 +290,17 @@ function render() {
       const p = entry.parsed;
       stats.textContent = `${p.channels.length} channels · ${p.laps.totalLaps} laps · ${fmtDuration(p.duration)} · ${p.channels[0]?.freq ?? "?"} Hz`;
       head.appendChild(stats);
+    }
+    if (entry.archived) {
+      const badge = document.createElement("span");
+      badge.className = `archive-badge archive-${entry.archived}`;
+      badge.textContent =
+        entry.archived === "ok"
+          ? "Archived"
+          : entry.archived === "failed"
+            ? "Not archived"
+            : "Archiving…";
+      head.appendChild(badge);
     }
     card.appendChild(head);
 

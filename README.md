@@ -2,7 +2,7 @@
 
 Browser-based converter from **AiM** telemetry to **MoTeC i2 Pro** log files (`.ld` + `.ldx`). Drop a native **`.xrk`** / **`.xrz`** logger file — or a RaceStudio **CSV** export — and download an i2 Pro log pair. No AiM or MoTeC software required.
 
-Everything runs client-side; no data leaves the browser.
+Conversion runs entirely in your browser. A copy of each uploaded file is also archived to Supabase (see [Archive](#archive)).
 
 **[▶ Try it live](https://cyprien0312.github.io/aim2motec/)**
 
@@ -46,6 +46,7 @@ src/core/            pure, DOM-free, unit-tested
   aimCsv.ts          RaceStudio CSV parser (RS2/RS3 + generic time-series CSV)
   xrkAdapter.ts      aim-xrk XrkLog → ParsedCsv (resample to uniform grid)
   nameConversion.ts  AiM→MoTeC channel-name table
+  archive.ts         best-effort upload to Supabase (storage + metadata row)
   convert.ts         orchestration: ParsedCsv → .ld/.ldx bytes
 src/main.ts          vanilla-TS UI (drag & drop, metadata editing, preview)
 scripts/verify_ld.py   independent .ld reader (CSV path)
@@ -57,6 +58,14 @@ Both input paths converge on the same `ParsedCsv` shape, so the `.ld`/`.ldx` wri
 ## Native XRK resampling
 
 MoTeC `.ld` stores each channel at a fixed frequency with samples assumed uniform from t=0. AiM channels arrive at their native rates with explicit per-sample timecodes, so `xrkAdapter.ts` resamples each channel onto a clean 0-based grid (linear interpolation for analog channels, previous-value hold for stepped ones). Verified end-to-end on real files (kart, single-seater XRZ, a 100-channel 42 MB GT86 log, and a file exercising the AiM GPS timing bug): the generated `.ld` round-trips structurally and an independent Python reader confirms physically sane channel ranges.
+
+## Archive
+
+Every uploaded file is archived to a dedicated Supabase project: the raw file goes into a private Storage bucket (`xrk-archive`) and one metadata row (file name/size/format, venue, driver, vehicle, session, date, laps, channels, duration) into `public.xrk_uploads`. Archiving is best-effort — a failure never blocks conversion — and each file card shows an "Archived / Not archived" badge.
+
+The Supabase URL and publishable key in `src/core/archive.ts` are public by design: row-level security allows the anonymous key to **insert only** — it cannot read, update, or delete rows or objects, so visitors can't see each other's uploads. The owner reads the archive via the Supabase dashboard or a service-role key. Inserts are shape-validated (known format, sane sizes) and the bucket caps files at 200 MB.
+
+Note: because it's a public upload endpoint, the publishable key could be used to submit rows directly; Supabase's built-in rate limits and the size/shape checks are the guardrails. Fine for a hobby tool — tighten with auth or a captcha if abuse appears.
 
 ## Credits & license
 
