@@ -18,6 +18,6 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
-    "aim-xrk": "^0.1.0"
+    "aim-xrk": "^0.1.1"
   }
 }
