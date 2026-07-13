@@ -8,7 +8,7 @@
 // 0-based uniform grid here (linear interpolation for analog channels,
 // previous-value hold for stepped ones).
 
-import { parseXrk, type XrkChannel, type XrkLog } from "xrk-js";
+import { parseXrk, type XrkChannel, type XrkLog } from "aim-xrk";
 import type { Channel, LapData, ParsedCsv, SessionMeta } from "./types";
 
 /** Largest per-channel rate we will emit (MoTeC stores freq as uint16). */
