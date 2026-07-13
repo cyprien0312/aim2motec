@@ -1,19 +1,23 @@
 # aim2motec-web
 
-Browser-based converter from **AiM RaceStudio CSV exports** to **MoTeC i2 Pro** log files (`.ld` + `.ldx`). A web port of [Aim_2_MoTeC](https://github.com/ludovicb1239/Aim_2_MoTeC) (Windows/C#, MIT) — the `.ld` binary writer is a byte-for-byte port of its `ldParser.cs`, including the reverse-engineered header template that i2 Pro requires to recognise the file as a Pro log.
+Browser-based converter from **AiM** telemetry to **MoTeC i2 Pro** log files (`.ld` + `.ldx`). Drop a native **`.xrk`** / **`.xrz`** logger file — or a RaceStudio **CSV** export — and download an i2 Pro log pair. No AiM or MoTeC software required.
 
 Everything runs client-side; no data leaves the browser.
 
-## Why CSV and not .xrk/.drk?
+**[▶ Try it live](https://claude.ai/code/artifact/037be539-a837-403f-9046-53c56c3afa0f)**
 
-The original Windows tool reads AiM's native `.xrk`/`.drk` files through AiM's **proprietary closed-source DLL** (`MatLabXRK-*.dll`), which only runs on Windows x64. That DLL cannot run in a browser, and the XRK container format is not publicly documented. So the web version takes the officially supported escape hatch: export your session from RaceStudio as CSV (`File → Export → CSV`), then convert here.
+## What it does
 
-What carries over from the CSV export:
+- **Native `.xrk` / `.xrz`** parsing in the browser via [aim-xrk](https://www.npmjs.com/package/aim-xrk) ([xrk-js](https://github.com/cyprien0312/xrk-js)) — no RaceStudio, no AiM DLL. XRZ is auto-decompressed.
+- **RaceStudio CSV** exports also supported (`File → Export → CSV`).
+- Writes a MoTeC i2 **Pro** `.ld` + `.ldx` pair. The `.ld` writer is a byte-for-byte port of [Aim_2_MoTeC](https://github.com/ludovicb1239/Aim_2_MoTeC)'s `ldParser.cs`, including the reverse-engineered header template i2 Pro requires to accept a file as a Pro log.
 
-- All data channels (name, unit, sample rate, values)
-- Session metadata (venue, vehicle, driver, session, date/time)
-- Beacon markers → lap beacons in the `.ldx` + synthetic `Lap Time` / `Lap Number` channels (10 Hz, same as the original tool)
-- Optional AiM → MoTeC channel renaming (editable mapping table, same format as `NameConversion.txt`)
+Carried across from the log:
+
+- All data channels (name, unit, sample rate, values) — each channel resampled onto a uniform grid for the `.ld` format
+- Session metadata (venue, vehicle, driver, session, date/time), editable before download
+- Laps → beacons in the `.ldx` + synthetic `Lap Time` / `Lap Number` channels (10 Hz)
+- Optional AiM → MoTeC channel renaming (editable table, `NameConversion.txt` format)
 
 ## Usage
 
@@ -22,38 +26,41 @@ npm install
 npm run dev        # dev server (LAN-reachable via --host)
 npm run build      # type-check + production build → dist/
 npm run test       # Vitest unit tests
-npm run verify     # end-to-end: generate sample .ld via the TS core,
-                   # re-read it with an independent Python parser
+npm run verify     # CSV path: generate a sample .ld, re-read with a Python parser
 ```
 
-Then open the page, drop one or more RaceStudio CSV exports, adjust driver/vehicle/venue if needed, and download the `.ld`/`.ldx` pair. Put both files in the same folder and open the `.ld` in i2 Pro.
+Verify the XRK path against a real file:
+
+```bash
+npx vite-node scripts/verifyXrk.ts path/to/session.xrk   # → out/*.ld + structure check
+```
+
+Open the page, drop `.xrk` / `.xrz` / `.csv` files, adjust metadata if needed, and download the `.ld` / `.ldx` pair. Put both files in the same folder and open the `.ld` in i2 Pro.
 
 ## Architecture
 
 ```
 src/core/            pure, DOM-free, unit-tested
-  headerTemplate.ts  13384-byte .ld header template (sparse), from full_header.cs
   ldWriter.ts        .ld binary + .ldx XML writer (port of ldParser.cs)
+  headerTemplate.ts  13384-byte .ld header template (sparse), from full_header.cs
   aimCsv.ts          RaceStudio CSV parser (RS2/RS3 + generic time-series CSV)
-  nameConversion.ts  AiM→MoTeC channel-name table (NameConversion.txt format)
-  convert.ts         orchestration: parsed CSV → .ld/.ldx bytes
+  xrkAdapter.ts      aim-xrk XrkLog → ParsedCsv (resample to uniform grid)
+  nameConversion.ts  AiM→MoTeC channel-name table
+  convert.ts         orchestration: ParsedCsv → .ld/.ldx bytes
 src/main.ts          vanilla-TS UI (drag & drop, metadata editing, preview)
-scripts/verify_ld.py independent .ld reader used by `npm run verify`
+scripts/verify_ld.py   independent .ld reader (CSV path)
+scripts/verifyXrk.ts   XRK → .ld end-to-end + structure re-read
 ```
 
-## Format notes
+Both input paths converge on the same `ParsedCsv` shape, so the `.ld`/`.ldx` writer is shared and unchanged.
 
-The `.ld` layout (little-endian throughout):
+## Native XRK resampling
 
-| offset | content |
-|---|---|
-| 0x0000 | header: magic `0x40`, pointers to channel meta / data / event block, device info, date/time, driver/vehicle/venue/session strings |
-| 0x06E2 | event block (from template) |
-| 0x3448 | channel metadata: doubly-linked list of 124-byte records (name, short name, unit, Hz, type=float32) |
-| after  | raw float32 sample data, one contiguous block per channel |
+MoTeC `.ld` stores each channel at a fixed frequency with samples assumed uniform from t=0. AiM channels arrive at their native rates with explicit per-sample timecodes, so `xrkAdapter.ts` resamples each channel onto a clean 0-based grid (linear interpolation for analog channels, previous-value hold for stepped ones). Verified end-to-end on real files (kart, single-seater XRZ, a 100-channel 42 MB GT86 log, and a file exercising the AiM GPS timing bug): the generated `.ld` round-trips structurally and an independent Python reader confirms physically sane channel ranges.
 
-Lap beacons live in the companion `.ldx` XML as microsecond timestamps.
+## Credits & license
 
-## License
+MIT.
 
-MIT, same as the upstream project it ports.
+- `.ld`/`.ldx` writer ported from [Aim_2_MoTeC](https://github.com/ludovicb1239/Aim_2_MoTeC) (MIT).
+- Native `.xrk`/`.xrz` parsing by [aim-xrk / xrk-js](https://github.com/cyprien0312/xrk-js) (MIT), a TypeScript port of [libxrk](https://github.com/m3rlin45/libxrk) (MIT).

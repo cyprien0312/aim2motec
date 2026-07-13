@@ -2,6 +2,12 @@ MIT License
 
 Copyright (c) 2026 YaofeiLiu
 
+Portions of the .ld/.ldx writer are ported from Aim_2_MoTeC
+(https://github.com/ludovicb1239/Aim_2_MoTeC), Copyright (c) 2023 ludovicb1239,
+MIT License. Native .xrk/.xrz parsing is provided by aim-xrk / xrk-js
+(https://github.com/cyprien0312/xrk-js), a port of libxrk
+(https://github.com/m3rlin45/libxrk), Copyright (c) 2024 Scott Smith, MIT License.
+
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
