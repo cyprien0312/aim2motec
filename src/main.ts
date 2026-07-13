@@ -26,43 +26,34 @@ let nameTableText = stringifyNameTable(DEFAULT_NAME_TABLE);
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 app.innerHTML = `
-  <div class="window">
-    <div class="titlebar">
-      <span class="titlebar-text">&#127937; AiM2MoTeC.exe &mdash; Telemetry Converter</span>
-      <span class="titlebar-controls" aria-hidden="true"><span class="tbtn">_</span><span class="tbtn">&#9633;</span><span class="tbtn">&times;</span></span>
-    </div>
-    <div class="window-body">
-      <p class="intro">
-        Convert AiM <b>.xrk</b> / <b>.xrz</b> logs &mdash; or RaceStudio <b>CSV</b> exports &mdash;
-        to MoTeC i2 Pro (<b>.ld</b> + <b>.ldx</b>). Native logger files are read directly,
-        with no RaceStudio or AiM software required. Everything runs in your browser; nothing is uploaded.
-      </p>
-      <div class="dropzone" id="dropzone">
-        <div class="big">Drop .xrk, .xrz or .csv files here</div>
-        <div class="hint">&mdash; or click to browse (multiple files OK) &mdash;</div>
-        <input type="file" id="fileInput" accept=".xrk,.xrz,.csv,text/csv" multiple hidden />
-      </div>
-      <fieldset class="options">
-        <legend>Options</legend>
-        <label class="check">
-          <input type="checkbox" id="renameCheck" checked />
-          Rename channels to MoTeC standard
-        </label>
-        <button class="secondary" id="editTableBtn" type="button">Edit name table&hellip;</button>
-      </fieldset>
-      <div id="tableEditor" class="section" hidden>
-        <div class="section-title">Name Conversion Table</div>
-        <textarea class="name-table" id="nameTableInput" spellcheck="false"></textarea>
-      </div>
-      <div class="section" id="filesSection" hidden>
-        <div class="section-title">Files</div>
-        <div id="fileList"></div>
-      </div>
-    </div>
-    <div class="statusbar">
-      <span id="status">Ready.</span>
-      <span>xrk-js &middot; Aim_2_MoTeC &middot; MIT</span>
-    </div>
+  <header class="hero">
+    <h1>AiM <span class="arrow">&rarr;</span> MoTeC</h1>
+    <p class="lead">
+      Convert AiM <b>.xrk</b> / <b>.xrz</b> logs &mdash; or RaceStudio <b>CSV</b> exports &mdash;
+      to MoTeC i2 Pro, right in your browser.
+    </p>
+  </header>
+  <div class="dropzone" id="dropzone">
+    <div class="dz-icon" aria-hidden="true">&darr;</div>
+    <div class="big">Drop .xrk, .xrz or .csv files</div>
+    <div class="hint">or click to choose &mdash; multiple files supported</div>
+    <input type="file" id="fileInput" accept=".xrk,.xrz,.csv,text/csv" multiple hidden />
+  </div>
+  <p class="status" id="status">Native logger files are read directly. Nothing is uploaded.</p>
+  <div class="options">
+    <label class="check">
+      <input type="checkbox" id="renameCheck" checked />
+      <span>Rename channels to MoTeC standard</span>
+    </label>
+    <button class="link-btn" id="editTableBtn" type="button">Edit name table</button>
+  </div>
+  <div id="tableEditor" class="section" hidden>
+    <div class="section-title">Name conversion table</div>
+    <textarea class="name-table" id="nameTableInput" spellcheck="false"></textarea>
+  </div>
+  <div class="section" id="filesSection" hidden>
+    <div class="section-title">Files</div>
+    <div id="fileList"></div>
   </div>
   <footer>
     Native .xrk/.xrz parsing by <a href="https://github.com/cyprien0312/xrk-js" target="_blank" rel="noopener">xrk-js</a>
