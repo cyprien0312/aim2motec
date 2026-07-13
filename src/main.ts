@@ -1,5 +1,6 @@
 import "./style.css";
 import { parseAimCsv } from "./core/aimCsv";
+import { parseXrkFile } from "./core/xrkAdapter";
 import { convert } from "./core/convert";
 import {
   DEFAULT_NAME_TABLE,
@@ -27,17 +28,18 @@ const app = document.querySelector<HTMLDivElement>("#app")!;
 app.innerHTML = `
   <header class="app-header">
     <h1>AiM <span class="arrow">→</span> MoTeC</h1>
-    <span class="subtitle" style="margin:0">RaceStudio CSV → i2 Pro .ld/.ldx converter</span>
+    <span class="subtitle" style="margin:0">.xrk / .xrz / RaceStudio CSV → i2 Pro .ld/.ldx</span>
   </header>
   <p class="subtitle">
-    Export your session from AiM RaceStudio as <b>CSV</b> (File → Export → CSV), drop it
-    here, and download a MoTeC i2 Pro log pair (.ld + .ldx). Everything runs in your
-    browser — no data leaves this page.
+    Drop AiM log files here and download a MoTeC i2 Pro log pair (.ld + .ldx).
+    Native <b>.xrk</b> and <b>.xrz</b> files are read directly — no RaceStudio or
+    AiM software needed. RaceStudio <b>CSV</b> exports work too. Everything runs in
+    your browser; no data leaves this page.
   </p>
   <div class="dropzone" id="dropzone">
-    <div class="big">Drop AiM CSV files here</div>
+    <div class="big">Drop AiM .xrk, .xrz or .csv files here</div>
     <div class="hint">or click to browse — multiple files supported</div>
-    <input type="file" id="fileInput" accept=".csv,text/csv" multiple hidden />
+    <input type="file" id="fileInput" accept=".xrk,.xrz,.csv,text/csv" multiple hidden />
   </div>
   <div class="options-bar">
     <label class="check">
@@ -55,9 +57,10 @@ app.innerHTML = `
     <div id="fileList"></div>
   </div>
   <footer>
-    Web port of <a href="https://github.com/ludovicb1239/Aim_2_MoTeC" target="_blank" rel="noopener">Aim_2_MoTeC</a> (MIT).
-    Reading native .xrk/.drk files requires AiM's proprietary Windows DLL, which cannot run
-    in a browser — export to CSV from RaceStudio first. Generated files open in MoTeC i2 Pro.
+    Native .xrk/.xrz parsing by <a href="https://github.com/cyprien0312/xrk-js" target="_blank" rel="noopener">xrk-js</a>
+    (a TypeScript port of <a href="https://github.com/m3rlin45/libxrk" target="_blank" rel="noopener">libxrk</a>);
+    .ld writer ported from <a href="https://github.com/ludovicb1239/Aim_2_MoTeC" target="_blank" rel="noopener">Aim_2_MoTeC</a>. All MIT.
+    Generated files open in MoTeC i2 Pro.
   </footer>
 `;
 
@@ -109,10 +112,15 @@ async function addFiles(files: FileList) {
     const entry: FileEntry = { id: nextId++, fileName: file.name };
     entries.push(entry);
     try {
-      const text = await file.text();
-      const parsed = parseAimCsv(text, {
-        fallbackDate: new Date(file.lastModified),
-      });
+      const fallbackDate = new Date(file.lastModified);
+      const ext = file.name.toLowerCase().split(".").pop();
+      let parsed;
+      if (ext === "xrk" || ext === "xrz") {
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        parsed = parseXrkFile(bytes, { fallbackDate });
+      } else {
+        parsed = parseAimCsv(await file.text(), { fallbackDate });
+      }
       entry.parsed = parsed;
       entry.meta = { ...parsed.meta };
     } catch (err) {
