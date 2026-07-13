@@ -4,9 +4,8 @@ import { parseXrkFile } from "./core/xrkAdapter";
 import { convert } from "./core/convert";
 import {
   DEFAULT_NAME_TABLE,
-  parseNameTable,
-  stringifyNameTable,
   lookupName,
+  type NameConvert,
 } from "./core/nameConversion";
 import type { ParsedCsv, SessionMeta } from "./core/types";
 
@@ -22,7 +21,7 @@ interface FileEntry {
 const entries: FileEntry[] = [];
 let nextId = 1;
 let renameChannels = true;
-let nameTableText = stringifyNameTable(DEFAULT_NAME_TABLE);
+const nameTable: NameConvert[] = DEFAULT_NAME_TABLE.map((e) => ({ ...e }));
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 app.innerHTML = `
@@ -49,7 +48,22 @@ app.innerHTML = `
   </div>
   <div id="tableEditor" class="section" hidden>
     <div class="section-title">Name conversion table</div>
-    <textarea class="name-table" id="nameTableInput" spellcheck="false"></textarea>
+    <p class="table-note">
+      When &ldquo;Rename channels&rdquo; is on, AiM channels matching a name below are renamed to the
+      MoTeC name (and short name) on conversion.
+    </p>
+    <div class="nt-wrap">
+      <table class="nt">
+        <thead>
+          <tr><th>AiM name</th><th>MoTeC name</th><th>Short name</th><th aria-label="Remove"></th></tr>
+        </thead>
+        <tbody id="nameTableBody"></tbody>
+      </table>
+    </div>
+    <div class="nt-actions">
+      <button class="link-btn" id="addRowBtn" type="button">+ Add mapping</button>
+      <button class="link-btn" id="resetTableBtn" type="button">Reset to defaults</button>
+    </div>
   </div>
   <div class="section" id="filesSection" hidden>
     <div class="section-title">Files</div>
@@ -70,11 +84,52 @@ const filesSection = document.getElementById("filesSection")!;
 const renameCheck = document.getElementById("renameCheck") as HTMLInputElement;
 const editTableBtn = document.getElementById("editTableBtn")!;
 const tableEditor = document.getElementById("tableEditor")!;
-const nameTableInput = document.getElementById(
-  "nameTableInput",
-) as HTMLTextAreaElement;
+const nameTableBody = document.getElementById("nameTableBody")!;
+const addRowBtn = document.getElementById("addRowBtn")!;
+const resetTableBtn = document.getElementById("resetTableBtn")!;
 
-nameTableInput.value = nameTableText;
+const NT_COLUMNS: Array<[keyof NameConvert, string]> = [
+  ["from", "AiM name, e.g. RPM"],
+  ["to", "MoTeC name"],
+  ["toShort", "Short name"],
+];
+
+/** Rebuild the editable name-conversion table from the current model. */
+function renderNameTable() {
+  nameTableBody.replaceChildren();
+  nameTable.forEach((row, i) => {
+    const tr = document.createElement("tr");
+    for (const [key, placeholder] of NT_COLUMNS) {
+      const td = document.createElement("td");
+      const input = document.createElement("input");
+      input.type = "text";
+      input.value = row[key];
+      input.placeholder = placeholder;
+      input.spellcheck = false;
+      input.addEventListener("input", () => {
+        nameTable[i][key] = input.value;
+        render(); // refresh the rename preview on file cards; keeps input focus
+      });
+      td.appendChild(input);
+      tr.appendChild(td);
+    }
+    const rmTd = document.createElement("td");
+    rmTd.className = "nt-remove";
+    const rm = document.createElement("button");
+    rm.type = "button";
+    rm.className = "nt-remove-btn";
+    rm.setAttribute("aria-label", `Remove ${row.from || "mapping"}`);
+    rm.textContent = "×";
+    rm.addEventListener("click", () => {
+      nameTable.splice(i, 1);
+      renderNameTable();
+      render();
+    });
+    rmTd.appendChild(rm);
+    tr.appendChild(rmTd);
+    nameTableBody.appendChild(tr);
+  });
+}
 
 renameCheck.addEventListener("change", () => {
   renameChannels = renameCheck.checked;
@@ -83,10 +138,19 @@ renameCheck.addEventListener("change", () => {
 editTableBtn.addEventListener("click", () => {
   tableEditor.hidden = !tableEditor.hidden;
 });
-nameTableInput.addEventListener("input", () => {
-  nameTableText = nameTableInput.value;
+addRowBtn.addEventListener("click", () => {
+  nameTable.push({ from: "", to: "", toShort: "" });
+  renderNameTable();
+  const last = nameTableBody.querySelector("tr:last-child input");
+  if (last instanceof HTMLInputElement) last.focus();
+});
+resetTableBtn.addEventListener("click", () => {
+  nameTable.splice(0, nameTable.length, ...DEFAULT_NAME_TABLE.map((e) => ({ ...e })));
+  renderNameTable();
   render();
 });
+
+renderNameTable();
 
 dropzone.addEventListener("click", () => fileInput.click());
 dropzone.addEventListener("dragover", (e) => {
@@ -166,7 +230,7 @@ function convertEntry(entry: FileEntry) {
   if (!entry.parsed || !entry.meta) return;
   const result = convert(entry.parsed, entry.meta, {
     renameChannels,
-    nameTable: parseNameTable(nameTableText),
+    nameTable,
   });
   download(`${result.baseName}.ld`, result.ld, "application/octet-stream");
   download(`${result.baseName}.ldx`, result.ldx, "application/xml");
@@ -186,7 +250,7 @@ const META_FIELDS: Array<[keyof SessionMeta & string, string]> = [
 function render() {
   filesSection.hidden = entries.length === 0;
   fileList.innerHTML = "";
-  const table = parseNameTable(nameTableText);
+  const table = nameTable;
 
   for (const entry of entries) {
     const card = document.createElement("div");

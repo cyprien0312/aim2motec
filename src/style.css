@@ -243,13 +243,79 @@ textarea:focus {
   border-color: var(--blue-focus);
   box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.25);
 }
-textarea.name-table {
-  min-height: 170px;
-  font-family: var(--mono);
-  font-size: 13px;
-  line-height: 1.6;
-  letter-spacing: 0;
-  resize: vertical;
+/* --- Name conversion table editor --- */
+.table-note {
+  font-size: 14px;
+  letter-spacing: -0.224px;
+  color: var(--muted);
+  margin: -6px 0 16px;
+  max-width: 46em;
+}
+.nt-wrap {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+table.nt {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 15px;
+  letter-spacing: -0.224px;
+}
+table.nt th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+  background: var(--pearl);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--hairline);
+}
+table.nt td {
+  padding: 0;
+  border-bottom: 1px solid var(--divider);
+  border-left: 1px solid var(--divider);
+}
+table.nt td:first-child {
+  border-left: none;
+}
+table.nt tbody tr:last-child td {
+  border-bottom: none;
+}
+table.nt td input {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 11px 14px;
+  width: 100%;
+  font-size: 15px;
+}
+table.nt td input:focus {
+  outline: none;
+  background: #eef4fd;
+  box-shadow: none;
+}
+td.nt-remove {
+  width: 44px;
+  text-align: center;
+}
+.nt-remove-btn {
+  background: transparent;
+  color: var(--muted-2);
+  font-size: 20px;
+  line-height: 1;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+.nt-remove-btn:hover {
+  color: #b3261e;
+  background: #fbeaea;
+}
+.nt-actions {
+  display: flex;
+  gap: 22px;
+  margin-top: 14px;
 }
 
 /* --- File cards --- */
